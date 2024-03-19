@@ -56,3 +56,24 @@ def plot2DSet(desc, labels):
     plt.scatter(desc_neg[:,0], desc_neg[:,1], marker='o', color="red") # 'o' red for class -1
     plt.scatter(desc_pos[:,0], desc_pos[:,1], marker='x', color="blue") # 'x' blue for class +1
     plt.show()
+
+def plot_decision_boundary(desc_set, label_set, classifier, step=30):
+    """ Plot the decision boundary associated with the classifier.
+
+    Args:
+        desc_set (ndarray): The input dataset descriptions.
+        label_set (ndarray): The corresponding labels of the dataset.
+        classifier (Classifier): The trained classifier to visualize.
+        step (int, optional): The resolution of the plot. Higher values provide a more precise boundary.
+            Defaults to 30.
+
+    """
+    mmax = desc_set.max(0)
+    mmin = desc_set.min(0)
+    x1grid, x2grid = np.meshgrid(np.linspace(mmin[0], mmax[0], step), np.linspace(mmin[1], mmax[1], step))
+    grid = np.hstack((x1grid.reshape(x1grid.size, 1), x2grid.reshape(x2grid.size, 1)))
+    res = np.array([classifier.predict(grid[i, :]) for i in range(len(grid))])
+    res = res.reshape(x1grid.shape)
+    plt.figure(figsize=(12,8))
+    plt.contourf(x1grid, x2grid, res, colors=["pink", "lightskyblue"], levels=[-1000, 0, 1000])
+    plt.show()
