@@ -38,3 +38,21 @@ def correlation(x, y):
     plt.show()
 
     return correlation
+
+
+def plot2DSet(desc, labels):
+    """ Display a 2D dataset.
+
+    Args:
+        desc (ndarray): The descriptions of the dataset.
+        labels (ndarray): The labels of the dataset.
+
+    The function should use the color 'red' for the class -1 and 'blue' for the +1 class.
+    """
+    desc_neg = desc[labels == -1]
+    desc_pos = desc[labels == 1]
+    
+    plt.figure(figsize=(12,8))
+    plt.scatter(desc_neg[:,0], desc_neg[:,1], marker='o', color="red") # 'o' red for class -1
+    plt.scatter(desc_pos[:,0], desc_pos[:,1], marker='x', color="blue") # 'x' blue for class +1
+    plt.show()
