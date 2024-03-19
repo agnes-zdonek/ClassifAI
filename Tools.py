@@ -8,6 +8,7 @@ Read README.md for usage instructions
 import numpy as np
 import pandas as pd
 import random
+import copy
 
 def generate_uniform_dataset(p, n, binf=-1, bsup=1):
     """ Generate a uniformly distributed dataset.
@@ -179,3 +180,40 @@ def crossval_strat(X, Y, n_iterations, iteration):
     Yapp = np.concatenate(Yapp)
 
     return Xapp, Yapp, X_test, Y_test
+
+
+def analyze_perfs(L):
+    """ Calculate the mean and standard deviation of a list of real numbers.
+
+    Args:
+        L (list): A non-empty list of real numbers.
+
+    """
+    if not L:
+        raise ValueError("Input list cannot be empty.")
+    return np.mean(L), np.std(L)
+
+def cross_validation(C, DS, nb_iter):
+    """ Perform cross-validation.
+
+    Args:
+        C (Classifier): The classifier.
+        DS (tuple): A tuple containing the dataset (X, Y).
+        nb_iter (int): Number of iterations for cross-validation.
+
+    Returns:
+        tuple: A tuple containing three elements:
+            - List of performance scores for each iteration.
+            - Mean performance score.
+            - Standard deviation of performance scores.
+    """
+    X, Y = DS
+    perf = []
+    for i in range(nb_iter):
+        Xapp, Yapp, Xtest, Ytest = crossval_strat(X, Y, nb_iter, i)
+        classifier = copy.deepcopy(C)
+        classifier.train(Xapp, Yapp)
+        perf.append(classifier.accuracy(Xtest, Ytest))
+        
+    perf_mean, perf_sd = analyze_perfs(perf)
+    return perf, perf_mean, perf_sd

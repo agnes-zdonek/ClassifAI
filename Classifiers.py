@@ -294,3 +294,164 @@ class MultiClassClassifier(Classifier):
             raise ValueError("Sets are not in equal length!")
         yhat = np.array([self.predict(x) for x in desc_set])
         return np.where(label_set == yhat, 1., 0.).mean()
+
+
+class ClassifierPerceptronKernel(PerceptronClassifier):
+    """ Kernelized Rosenblatt Perceptron.
+    """
+    def __init__(self, input_dimension, learning_rate, noyau, init=0):
+        """ Constructor for ClassifierPerceptronKernel.
+
+        Args:
+            input_dimension (int): Dimension of the input space (original space).
+            learning_rate (float): Learning rate (epsilon).
+            noyau (Kernel): Kernel to use.
+            init (int, optional): Initialization mode of w:
+                - if 0 (default): w initialized to 0,
+                - if 1: w initialized by randomly drawing small values.
+
+        Raises:
+            ValueError: If the input_dimension is not positive or the learning_rate is not positive.
+
+        """
+        if input_dimension <= 0:
+            raise ValueError("Input dimension must be positive.")
+        if learning_rate <= 0:
+            raise ValueError("Learning rate must be positive.")
+        
+        self.__init__(input_dimension, learning_rate)
+        self.noyau = noyau
+        if init == 0:
+            self.w = np.zeros(self.noyau.get_output_dim())
+        else:
+            self.w = np.random.uniform(0, 1, self.noyau.get_output_dim())
+            lst = []
+            for i in self.w:
+                lst.append((2 * i - 1) * 0.001)
+            self.w = np.array(lst) 
+        
+    def train_step(self, desc_set, label_set):
+        """ Perform a single iteration over all examples in the dataset,
+            taking examples randomly.
+
+        Args:
+            desc_set (ndarray): Array containing descriptions.
+            label_set (ndarray): Array containing corresponding labels.
+
+        """
+        if len(desc_set) != len(label_set):
+            raise ValueError("The number of descriptions must be equal to the number of labels.")
+        
+        num_examples = desc_set.shape[0]
+        indices = np.arange(num_examples)
+        np.random.shuffle(indices)
+        for idx in indices:
+            x = desc_set[idx]
+            y = label_set[idx]
+            x_k = self.noyau.transform(x)
+            if y * np.dot(self.w, x_k) <= 0:
+                self.w += self.learning_rate * y * x_k
+     
+    def score(self, x):
+        """ Return the prediction score for x.
+
+        Args:
+            x (ndarray): A description in the original space.
+
+        Returns:
+            float: The prediction score.
+
+        Raises:
+            ValueError: If the input dimension of x does not match the expected input dimension.
+        """
+        if len(x) != self.input_dimension:
+            raise ValueError("Input dimension of x does not match the expected input dimension.")
+        
+        x_k = self.noyau.transform(x)
+        return np.dot(self.w, x_k)
+
+import numpy as np
+
+class ClassifierADALINE(Classifier):
+    """ ADALINE classifier.
+    """
+    def __init__(self, input_dimension, learning_rate, history=False, niter_max=1000):
+        """ Constructor for ClassifierADALINE.
+
+        Args:
+            input_dimension (int): Dimension of the input space (description).
+            learning_rate (float): Learning rate (epsilon).
+            history (bool, optional): Whether to store the weights during training.
+            niter_max (int, optional): Maximum number of iterations.
+
+        Raises:
+            ValueError: If the input_dimension is not positive or the learning_rate is not positive.
+
+        """
+        if input_dimension <= 0:
+            raise ValueError("Input dimension must be positive.")
+        if learning_rate <= 0:
+            raise ValueError("Learning rate must be positive.")
+
+        self.input_dimension = input_dimension
+        self.learning_rate = learning_rate
+        self.history = history
+        self.niter_max = niter_max
+        self.allw = []
+        self.w = (2*(np.random.rand(self.input_dimension)) - 1) * 0.001
+        
+    def train(self, desc_set, label_set):
+        """ Train the model on the given dataset.
+
+        Args:
+            desc_set (ndarray): Array containing descriptions.
+            label_set (ndarray): Array containing corresponding labels.
+
+        Raises:
+            ValueError: If the number of descriptions does not match the number of labels.
+
+        """
+        if len(desc_set) != len(label_set):
+            raise ValueError("The number of descriptions must be equal to the number of labels.")
+        
+        n_samples = desc_set.shape[0]
+        iteration = 0
+        while iteration < self.niter_max:
+            i = np.random.randint(0, n_samples)
+            xi = desc_set[i]
+            yi = label_set[i]
+            gradient = xi * (np.dot(xi, self.w) - yi)
+            self.w -= self.learning_rate * gradient
+            if self.history:
+                self.allw.append(self.w.copy())
+            iteration += 1
+    
+    def score(self, x):
+        """ Return the prediction score for x.
+
+        Args:
+            x (ndarray): A description.
+
+        Returns:
+            float: The prediction score.
+
+        Raises:
+            ValueError: If the input dimension of x does not match the expected input dimension.
+
+        """
+        if len(x) != self.input_dimension:
+            raise ValueError("Input dimension of x does not match the expected input dimension.")
+        
+        return np.dot(x, self.w)
+    
+    def predict(self, x):
+        """ Return the prediction for x.
+
+        Args:
+            x (ndarray): A description.
+
+        Returns:
+            int: The predicted label (+1 or -1).
+
+        """
+        return 1 if self.score(x) >= 0 else -1
